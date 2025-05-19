@@ -103,8 +103,18 @@ func newS3Storage(ctx context.Context, opts Options) (*S3, error) {
 	}
 
 	return &S3{
-		api:                    s3.New(awsSession),
-		downloader:             s3manager.NewDownloader(awsSession),
+		api: s3.New(awsSession),
+		downloader: s3manager.NewDownloader(
+			awsSession,
+			func(d *s3manager.Downloader) {
+				if opts.BufferSize == 0 {
+					return
+				}
+				d.BufferProvider = s3manager.NewPooledBufferedWriterReadFromProvider(
+					opts.BufferSize,
+				)
+			},
+		),
 		uploader:               s3manager.NewUploader(awsSession),
 		endpointURL:            endpointURL,
 		dryRun:                 opts.DryRun,
